@@ -51,11 +51,21 @@
             </div>
         </template>
     </div>
+
+    <div class="card card-body">
+        <template>
+            <div class="container">
+                <h1>Number: <span>{{number}}</span></h1>
+                <input type="number" v-model="number">
+            </div>
+        </template>
+    </div>
 </div>
 <script src="prevue.js"></script>
 <script>
     window.state = createState({
         count: 0,
+        number: 0,
         clicked: false,
     });
 
