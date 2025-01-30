@@ -1,4 +1,28 @@
 (() => {
+    const assignDeep = (elm, props) => Object.entries(props).forEach(([key, value]) =>
+        typeof value === 'object' ? assignDeep(elm[key], value) : Object.assign(elm, {[key]: value})
+    );
+
+    const tagNames = ['a', 'abbr', 'address', 'area', 'article', 'aside', 'audio', 'b', 'base', 'bdi', 'bdo', 'blockquote', 'body', 'br', 'button', 'canvas', 'caption', 'cite', 'code', 'col', 'colgroup', 'data', 'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'div', 'dl', 'dt', 'em', 'embed', 'fieldset','figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hr', 'html', 'i', 'iframe', 'img', 'input', 'ins','kbd', 'label', 'legend', 'li', 'link', 'main', 'map', 'mark', 'meta', 'meter', 'nav', 'noscript', 'object', 'ol', 'optgroup', 'option', 'output', 'p', 'param', 'picture', 'pre', 'progress', 'q', 'rp', 'rt', 'ruby', 's', 'samp', 'script', 'section', 'select', 'small', 'source', 'span', 'strong', 'style', 'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'template', 'textarea', 'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track', 'u', 'ul', 'var', 'video', 'wbr'].forEach(tag => window[tag] = function(...args) {
+        const props = typeof args[0] == 'object' && !(args[0] instanceof HTMLElement) ? args.shift() : null;
+        const elm = document.createElement(tag);
+        props && assignDeep(elm, props);
+
+        // Handle @click and v-if
+        if (props) {
+            Object.entries(props).forEach(([key, value]) => {
+                if (key.startsWith('@')) {
+                    elm.addEventListener(key.slice(1), value);
+                } else if (key === 'v-if' && !value) {
+                    elm.style.display = 'none';
+                }
+            });
+        }
+
+        elm.append(...args.map(a => typeof a == 'string' ? document.createTextNode(a) : a));
+        return elm;
+    });
+
     window.createState = state => {
         const appState = { ...state };
         appState._updates = Object.fromEntries(Object.keys(state).map(s => [s, []]));
@@ -163,20 +187,20 @@
         };
     };
 
-    (function (callback) {
-        if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", callback);
-        } else {
-            callback();
-        }
-    })(function () {
-        // console.log("Document is ready!");
-
-        if (window.setup) window.setup();
-
+    // Auto-initialization
+    (document.readyState === "loading"
+            ? cb => document.addEventListener("DOMContentLoaded", cb)
+            : cb => cb()
+    )(() => {
+        window.setup?.();
         document.querySelectorAll("template").forEach(template => {
             const Component = parseHTMLToJS(template.innerHTML, window.state);
-            template.replaceWith(Component());
+            const element = Component();
+            if (element instanceof Node) {
+                template.replaceWith(element);
+            } else {
+                console.error("Component did not return a valid DOM node", element);
+            }
         });
     });
 })();
