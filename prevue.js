@@ -43,6 +43,7 @@
 
     window.parseHTMLToJS = (html, state) => {
         const dom = new DOMParser().parseFromString(html, "text/html").body;
+        let lastIfPlaceholder = null; // Track last v-if
 
         const convertNode = (node) => {
             if (node.nodeType === Node.TEXT_NODE) {
@@ -90,6 +91,8 @@
                         expression,
                         getValue: () => new Function("with(this) { return " + expression + "; }").call(state)
                     };
+                } else if (attr.name === "v-else") {
+                    props["v-else"] = true;
                 } else {
                     props[attr.name] = attr.value;
                 }
@@ -104,29 +107,63 @@
                     const { expression, getValue } = props["v-if"];
                     const placeholder = document.createComment(` v-if: ${expression} `);
                     let currentElement = null;
+                    lastIfPlaceholder = placeholder; // Store for v-else
 
                     const update = () => {
                         const shouldShow = getValue();
                         if (shouldShow && !currentElement) {
-                            // Create and show element
-                            delete props["v-if"]; // Remove v-if to prevent recursion
+                            delete props["v-if"];
                             currentElement = buildElement({ tag, props, children });
                             placeholder.parentNode?.insertBefore(currentElement, placeholder);
                         } else if (!shouldShow && currentElement) {
-                            // Remove element
                             currentElement.remove();
                             currentElement = null;
                         }
                     };
 
-                    // Register for updates
                     const dependencies = expression.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) || [];
                     dependencies.forEach(dep => {
                         state.addUpdate(dep, update);
                     });
 
-                    // Initial render
                     setTimeout(update, 0);
+                    return placeholder;
+                }
+
+                if (props && props["v-else"]) {
+                    if (!lastIfPlaceholder) {
+                        console.error("v-else used without v-if");
+                        return document.createComment(" v-else error ");
+                    }
+
+                    const placeholder = document.createComment(" v-else ");
+                    let currentElement = null;
+                    const prevIfPlaceholder = lastIfPlaceholder;
+                    lastIfPlaceholder = null;
+
+                    const update = () => {
+                        // Get the opposite of the v-if condition
+                        const shouldShow = !prevIfPlaceholder.previousElementSibling;
+                        if (shouldShow && !currentElement) {
+                            delete props["v-else"];
+                            currentElement = buildElement({ tag, props, children });
+                            placeholder.parentNode?.insertBefore(currentElement, placeholder);
+                        } else if (!shouldShow && currentElement) {
+                            currentElement.remove();
+                            currentElement = null;
+                        }
+                    };
+
+                    setTimeout(update, 0);
+                    
+                    // Setup observer after initial render
+                    setTimeout(() => {
+                        if (placeholder.parentNode) {
+                            const observer = new MutationObserver(update);
+                            observer.observe(placeholder.parentNode, { childList: true });
+                        }
+                    }, 0);
+
                     return placeholder;
                 }
 
