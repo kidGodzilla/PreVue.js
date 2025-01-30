@@ -26,7 +26,7 @@
         }
         .column { flex-direction: column; }
         h1 { font-size: 60px; }
-        button { margin-right: 5px; }
+        button { margin-right: 5px; user-select: none; }
     </style>
 </head>
 <body class="container flex-centered">
@@ -54,10 +54,13 @@
 </div>
 <script src="prevue.js"></script>
 <script>
-    window.state = createState({ count: 0, clicked: false });
+    window.state = createState({
+        count: 0,
+        clicked: false,
+    });
 
     function setup() {
-        console.log('Setup callback')
+        console.log('Setup callback');
     }
 </script>
 </body>
