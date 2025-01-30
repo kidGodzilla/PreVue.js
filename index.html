@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, width=device-width, height=device-height, viewport-fit=cover">
+
+    <title>Tiny Vue</title>
+
+    <link href="https://cdn.jsdelivr.net/gh/rajnandan1/brutopia@latest/dist/assets/compiled/css/app.css" rel="stylesheet" crossorigin="anonymous">
+
+    <style type="text/css">
+        body {
+            background: #208bfe;
+            height: 100vh;
+            color: #fff;
+        }
+        .flex-centered {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .column { flex-direction: column; }
+        h1 { font-size: 60px; }
+        button { margin-right: 5px; }
+    </style>
+</head>
+<body class="container flex-centered">
+<div class="flex-centered column">
+    <div class="card card-body">
+        <template>
+            <div class="container">
+                <h1>Hello, <span>World!</span></h1>
+                <button @click="alert('Clicked!')">Click Me</button>
+            </div>
+        </template>
+    </div>
+
+    <div class="card card-body">
+        <template>
+            <div class="container">
+                <h1>{{count}}</h1>
+                <button @click="count++">Increment</button>
+                <button @click="count--">Decrement</button>
+                <button @click="count = 0">Reset</button>
+            </div>
+        </template>
+    </div>
+</div>
+<script src="prevue.js"></script>
+<script>
+    window.state = createState({ count: 0 });
+
+    document.querySelectorAll("template").forEach(template => {
+        const Component = parseHTMLToJS(template.innerHTML, window.state);
+        template.replaceWith(Component());
+    });
+</script>
+</body>
+</html>
