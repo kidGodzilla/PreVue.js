@@ -34,8 +34,9 @@
     <div class="card card-body">
         <template>
             <div class="container">
-                <h1>Hello, <span>World!</span></h1>
-                <button @click="alert('Clicked!')">Click Me</button>
+                <h1 v-if="!clicked">Hello, <span>World!</span></h1>
+                <h1 v-else>Clicked</h1>
+                <button @click="clicked = !clicked">Click Me</button>
             </div>
         </template>
     </div>
@@ -53,12 +54,11 @@
 </div>
 <script src="prevue.js"></script>
 <script>
-    window.state = createState({ count: 0 });
+    window.state = createState({ count: 0, clicked: false });
 
-    document.querySelectorAll("template").forEach(template => {
-        const Component = parseHTMLToJS(template.innerHTML, window.state);
-        template.replaceWith(Component());
-    });
+    function setup() {
+        console.log('Setup callback')
+    }
 </script>
 </body>
 </html>

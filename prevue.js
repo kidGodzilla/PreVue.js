@@ -85,7 +85,11 @@
                     const eventName = attr.name.slice(1);
                     props[`@${eventName}`] = new Function("event", `with(this) { ${attr.value} }`).bind(state);
                 } else if (attr.name === "v-if") {
-                    props["v-if"] = new Function("with(this) { return " + attr.value + "; }").call(state);
+                    const expression = attr.value;
+                    props["v-if"] = {
+                        expression,
+                        getValue: () => new Function("with(this) { return " + expression + "; }").call(state)
+                    };
                 } else {
                     props[attr.name] = attr.value;
                 }
@@ -96,7 +100,42 @@
 
         return () => {
             const buildElement = ({ tag, props, children }) => {
-                const elm = window[tag] ? window[tag](props, ...children.map(c => typeof c === "string" ? c : buildElement(c))) : document.createElement(tag);
+                if (props && props["v-if"]) {
+                    const { expression, getValue } = props["v-if"];
+                    const placeholder = document.createComment(` v-if: ${expression} `);
+                    let currentElement = null;
+
+                    const update = () => {
+                        const shouldShow = getValue();
+                        if (shouldShow && !currentElement) {
+                            // Create and show element
+                            delete props["v-if"]; // Remove v-if to prevent recursion
+                            currentElement = buildElement({ tag, props, children });
+                            placeholder.parentNode?.insertBefore(currentElement, placeholder);
+                        } else if (!shouldShow && currentElement) {
+                            // Remove element
+                            currentElement.remove();
+                            currentElement = null;
+                        }
+                    };
+
+                    // Register for updates
+                    const dependencies = expression.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) || [];
+                    dependencies.forEach(dep => {
+                        state.addUpdate(dep, update);
+                    });
+
+                    // Initial render
+                    setTimeout(update, 0);
+                    return placeholder;
+                }
+
+                const elm = window[tag] ? window[tag](props, ...children.map(c => {
+                    if (c instanceof Node) {
+                        return c;
+                    }
+                    return typeof c === "string" ? c : buildElement(c);
+                })) : document.createElement(tag);
 
                 if (props) {
                     for (const key in props) {
@@ -114,6 +153,20 @@
         };
     };
 
+    (function (callback) {
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", callback);
+        } else {
+            callback();
+        }
+    })(function () {
+        // console.log("Document is ready!");
 
+        if (window.setup) window.setup();
 
+        document.querySelectorAll("template").forEach(template => {
+            const Component = parseHTMLToJS(template.innerHTML, window.state);
+            template.replaceWith(Component());
+        });
+    });
 })();
