@@ -70,6 +70,8 @@
                 if (attr.name.startsWith("@")) {
                     const eventName = attr.name.slice(1);
                     props[`@${eventName}`] = new Function("event", `with(this) { ${attr.value} }`).bind(state);
+                } else if (attr.name === "v-model") {
+                    props["v-model"] = attr.value.trim();
                 } else if (attr.name === "v-if") {
                     const expression = attr.value;
                     props["v-if"] = {
@@ -164,6 +166,19 @@
                         if (key.startsWith("@")) {
                             const eventName = key.slice(1);
                             elm.addEventListener(eventName, props[key]);
+                        } else if (key === "v-model") {
+                            const stateProp = props[key];
+                            elm.value = state[stateProp];
+
+                            // Update state when input changes
+                            elm.addEventListener("input", (event) => {
+                                state[stateProp] = event.target.value;
+                            });
+
+                            // Update input value when state changes
+                            state.addUpdate(stateProp, () => {
+                                elm.value = state[stateProp];
+                            });
                         }
                     }
                 }
